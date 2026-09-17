@@ -10,6 +10,7 @@ import SidePanels from './components/SidePanels';
 import ArticleStrip from './components/ArticleStrip';
 import ArticleDrawer from './components/ArticleDrawer';
 import {withBasePath} from './lib/asset-path.mjs';
+import InfoPopover from './components/InfoPopover';
 
 type Metadata={articleCount:number;countryCount:number};
 type Data={articles:Article[];metadata:Metadata};
@@ -129,5 +130,6 @@ export default function Dashboard(){
     </div>
     <ArticleStrip articles={filtered} onOpen={setDrawer}/>
     <ArticleDrawer article={drawer} onClose={()=>setDrawer(null)}/>
+    <InfoPopover/>
   </main>;
 }

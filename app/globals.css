@@ -5,6 +5,27 @@ body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,"PingFa
 button,input{font:inherit}button{cursor:pointer}h1,h2,h3,p{margin-top:0}
 ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#d0d7e2;border-radius:8px}::-webkit-scrollbar-track{background:transparent}
 
+.info-popover{position:fixed;right:18px;bottom:18px;z-index:50}
+.info-trigger{position:relative;z-index:3;width:42px;height:42px;border-radius:50%;border:1px solid #cbd5e1;background:#fff;color:var(--blue);font-family:Georgia,serif;font-size:23px;font-weight:700;font-style:italic;box-shadow:0 8px 24px #14203326;transition:transform .16s ease,box-shadow .16s ease,background .16s ease}
+.info-trigger:hover,.info-trigger:focus-visible{transform:translateY(-2px);box-shadow:0 12px 30px #14203335;background:var(--blue-soft);outline:3px solid #3765d52b;outline-offset:2px}
+.info-trigger[aria-expanded=true]{background:var(--blue);border-color:var(--blue);color:#fff}
+.info-backdrop{position:fixed;inset:0;z-index:1;border:0;background:#1420330d;cursor:default}
+.info-card{position:absolute;z-index:2;right:0;bottom:54px;width:min(390px,calc(100vw - 28px));max-height:min(650px,calc(100vh - 90px));overflow:auto;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 22px 60px #14203335;padding:18px;animation:info-in .18s ease-out}
+.info-card>header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:13px;border-bottom:1px solid var(--line)}
+.info-card h2{font-size:20px;letter-spacing:-.02em;margin:2px 0 0}
+.info-kicker{margin:0;color:var(--blue);font-size:9px;font-weight:800;letter-spacing:.18em}
+.info-close{width:31px;height:31px;flex:none;border:0;border-radius:50%;background:#eef2f7;color:var(--muted);font-size:23px;line-height:1}
+.info-close:hover,.info-close:focus-visible{background:#e2e8f0;color:var(--ink);outline:2px solid #3765d545}
+.info-content{display:grid;grid-template-columns:1fr 1fr;gap:14px 18px;padding:16px 0}
+.info-content section{min-width:0}
+.info-content h3{font-size:13px;margin:0 0 6px;color:var(--ink)}
+.info-content ul{margin:0;padding-left:16px;color:var(--muted);font-size:12px;line-height:1.55}
+.info-content li+li{margin-top:4px}
+.info-note{margin:0;padding:11px 12px;border-radius:10px;background:#f1f5f9;color:var(--muted);font-size:11px;line-height:1.5}
+.info-note strong{color:var(--ink)}
+@keyframes info-in{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+@media(max-width:620px){.info-popover{right:12px;bottom:12px}.info-card{bottom:50px;padding:15px}.info-content{grid-template-columns:1fr;gap:12px}}
+
 .va{height:100vh;display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;gap:10px;padding:10px 14px;min-width:1160px}
 .panel{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px}
 .panel h3{font-size:13px;margin:0 0 10px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}

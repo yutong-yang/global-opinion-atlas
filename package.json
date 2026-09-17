@@ -14,7 +14,8 @@
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "data:build": "node scripts/build-data.mjs",
     "test:data": "node --test scripts/build-data.test.mjs",
-    "test:pages": "node --test scripts/asset-path.test.mjs"
+    "test:pages": "node --test scripts/asset-path.test.mjs",
+    "test:ui": "vitest run --config vitest.config.ts app/components/InfoPopover.test.tsx"
   },
   "dependencies": {
     "@d3-maps/atlas": "^1.0.1",
