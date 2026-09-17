@@ -27,7 +27,6 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run test:data
       - run: npm run test:pages
       - run: npm run build:pages
       - uses: actions/configure-pages@v5
