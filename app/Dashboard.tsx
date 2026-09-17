@@ -1,15 +1,132 @@
 'use client';
 import {useEffect,useMemo,useRef,useState} from 'react';
-import {geoNaturalEarth1,geoPath} from 'd3-geo';
-import {feature} from 'topojson-client';
-import {Countries110m} from '@d3-maps/atlas';
-type Sentiment='positive'|'neutral'|'negative'|'unknown';
-type Article={rowNumber:number;articleId:string;url:string|null;title:string|null;matchedSentence:string|null;keywordSentence:string|null;country:string;iso3:string|null;region:string|null;state:string|null;city:string|null;language:string;sentiment:Sentiment;sourceName:string|null;sourceDomain:string|null;reach:number|null;engagement:number|null};
-type Country={country:string;iso3:string|null;mentions:number;reach:number;reachValid:number;sentiment:Record<Sentiment,number>};
-type Metadata={articleCount:number;countryCount:number;coverage:Record<string,{valid:number;total:number}>;duplicateArticleIds:number;duplicateUrls:number;unmappedCountries:string[]};
-type Data={articles:Article[];countries:Country[];metadata:Metadata}; type Metric='mentions'|'reach'|'tone';
-const names:Record<string,string>={'United States':'美国','China':'中国','Germany':'德国','United Kingdom':'英国','Canada':'加拿大','Turkey':'土耳其','Indonesia':'印度尼西亚','India':'印度','France':'法国','Spain':'西班牙','Hong Kong':'中国香港','Mexico':'墨西哥','Malaysia':'马来西亚','Greece':'希腊','Romania':'罗马尼亚','Italy':'意大利','Brazil':'巴西','Taiwan':'中国台湾','Vietnam':'越南','Australia':'澳大利亚','Russia':'俄罗斯','Japan':'日本','Singapore':'新加坡'};
-const name=(s:string)=>names[s]||s,fmt=new Intl.NumberFormat('zh-CN'),compact=new Intl.NumberFormat('zh-CN',{notation:'compact',maximumFractionDigits:1}),tone=(d:Country)=>(d.sentiment.positive-d.sentiment.negative)/d.mentions*100;
-function MapView({countries,metric,selected,onSelect}:{countries:Country[];metric:Metric;selected:string|null;onSelect:(c:string)=>void}){const ref=useRef<SVGSVGElement>(null),[width,setWidth]=useState(760);useEffect(()=>{const e=ref.current;if(!e)return;const o=new ResizeObserver(()=>setWidth(e.clientWidth||760));o.observe(e);return()=>o.disconnect()},[]);const height=Math.max(300,Math.min(460,width*.56));const shapes=useMemo(()=>feature(Countries110m as never,(Countries110m as any).objects.features).features,[]);const projection=geoNaturalEarth1().fitExtent([[8,8],[width-8,height-8]],{type:'FeatureCollection',features:shapes} as never),path=geoPath(projection),byIso=new Map(countries.map(d=>[d.iso3,d])),max=Math.max(...countries.map(d=>metric==='tone'?Math.abs(tone(d)):d[metric]),1);const fill=(d?:Country)=>{if(!d)return'#e8edf3';if(metric==='tone'){const t=tone(d);return t>5?'#31a37e':t<-5?'#d36262':'#c7d0da'}const p=Math.log1p(d[metric])/Math.log1p(max);return`color-mix(in srgb,#3765d5 ${18+p*82}%,#e8edf3)`};return <svg ref={ref} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="全球媒体舆情国家分布地图">{shapes.map((s:any)=>{const d=byIso.get(s.properties.id);return <path key={s.properties.id} d={path(s)||''} fill={fill(d)} className={selected===d?.country?'map-country selected':'map-country'} onClick={()=>d&&onSelect(d.country)}><title>{d?`${name(d.country)}：${fmt.format(d.mentions)} 篇，触达 ${fmt.format(d.reach)}`:'无数据'}</title></path>})}</svg>}
-function Bars({title,items,onSelect}:{title:string;items:[string,number][];onSelect?:(v:string)=>void}){const max=Math.max(...items.map(x=>x[1]),1);return <section className="panel"><h3>{title}</h3><div className="bars">{items.slice(0,10).map(([n,v])=><button className="bar" key={n} onClick={()=>onSelect?.(n)} disabled={!onSelect}><span>{name(n)}</span><i style={{width:`${v/max*100}%`}}/><b>{fmt.format(v)}</b></button>)}</div></section>}
-export default function Dashboard(){const[data,setData]=useState<Data|null>(null),[metric,setMetric]=useState<Metric>('mentions'),[country,setCountry]=useState<string|null>(null),[language,setLanguage]=useState<string|null>(null),[sentiment,setSentiment]=useState<Sentiment|null>(null),[source,setSource]=useState<string|null>(null),[query,setQuery]=useState(''),[page,setPage]=useState(0),[showAll,setShowAll]=useState(false),[quality,setQuality]=useState(false);useEffect(()=>{Promise.all(['articles','countries','metadata'].map(n=>fetch(`/data/${n}.json`).then(r=>r.json()))).then(([articles,countries,metadata])=>setData({articles,countries,metadata}))},[]);const filtered=useMemo(()=>data?.articles.filter(a=>(!country||a.country===country)&&(!language||a.language===language)&&(!sentiment||a.sentiment===sentiment)&&(!source||a.sourceDomain===source)&&(!query||[a.title,a.matchedSentence,a.keywordSentence,a.sourceName,a.sourceDomain].some(v=>v?.toLowerCase().includes(query.toLowerCase()))))||[],[data,country,language,sentiment,source,query]);useEffect(()=>setPage(0),[country,language,sentiment,source,query]);if(!data)return <main className="loading"><h1>全球媒体舆情图谱</h1><p>正在准备全部 5,543 篇报道…</p></main>;const sorted=[...data.countries].sort((a,b)=>metric==='tone'?Math.abs(tone(b))-Math.abs(tone(a)):b[metric]-a[metric]),selected=data.countries.find(d=>d.country===country),all=(field:keyof Article)=>Object.entries(filtered.reduce((m:Record<string,number>,a)=>{const k=String(a[field]??'未知');m[k]=(m[k]||0)+1;return m},{})).sort((a,b)=>b[1]-a[1]) as [string,number][],reset=()=>{setCountry(null);setLanguage(null);setSentiment(null);setSource(null);setQuery('')},pages=Math.max(1,Math.ceil(filtered.length/20));return <main><header><div><p className="eyebrow">GLOBAL MEDIA OPINION ATLAS</p><h1>全球媒体舆情图谱</h1><p className="subtitle">TikTok 用户迁入小红书 · 2025-01-15 · 媒体报道，不代表全球公众意见</p></div><button className="quality-button" onClick={()=>setQuality(!quality)}>数据质量</button></header><nav className="breadcrumbs"><button onClick={reset}>全球</button>{country&&<><span>›</span><button>{name(country)}</button></>}{source&&<><span>›</span><span>{source}</span></>}</nav><section className="stats"><article><span>当前报道</span><strong>{fmt.format(filtered.length)}</strong><small>全部 {fmt.format(data.metadata.articleCount)} 篇</small></article><article><span>潜在触达</span><strong>{compact.format(filtered.reduce((s,a)=>s+(a.reach||0),0))}</strong><small>{fmt.format(filtered.filter(a=>a.reach!=null).length)} 条有效</small></article><article><span>覆盖国家</span><strong>{new Set(filtered.map(a=>a.country)).size}</strong><small>全部 {data.metadata.countryCount} 个</small></article></section><section className="toolbar"><div className="segment">{(['mentions','reach','tone'] as Metric[]).map(m=><button key={m} aria-pressed={metric===m} onClick={()=>setMetric(m)}>{m==='mentions'?'报道量':m==='reach'?'触达量':'情感偏向'}</button>)}</div><input aria-label="搜索全部文章" placeholder="搜索标题、命中句、关键词或媒体" value={query} onChange={e=>setQuery(e.target.value)}/>{(country||language||sentiment||source||query)&&<button className="reset" onClick={reset}>清除筛选</button>}</section>{quality&&<section className="quality"><h2>数据质量</h2><div>{[['州份',data.metadata.coverage.state],['区域',data.metadata.coverage.region],['城市',data.metadata.coverage.city],['互动量',data.metadata.coverage.engagement]].map(([n,v]:any)=><p key={n}><span>{n}有效率</span><b>{(v.valid/v.total*100).toFixed(1)}%</b></p>)}</div><small>重复文章 ID 组 {data.metadata.duplicateArticleIds} · 重复 URL 组 {data.metadata.duplicateUrls} · 未映射国家 {data.metadata.unmappedCountries.length}</small></section>}<div className="overview"><section className="map-panel"><MapView countries={data.countries} metric={metric} selected={country} onSelect={setCountry}/><div className="legend"><i/><span>{metric==='mentions'?'报道量（对数色阶）':metric==='reach'?'触达量（对数色阶）':'绿色偏正 · 灰色中性 · 红色偏负'}</span></div></section><section className="ranking"><div className="section-head"><h2>国家分布</h2><button onClick={()=>setShowAll(!showAll)}>{showAll?'收起':'查看全部 114'}</button></div>{sorted.slice(0,showAll?114:12).map((d,i)=><button key={d.country} className={country===d.country?'rank active':'rank'} onClick={()=>setCountry(d.country)}><span>{i+1}</span><b>{name(d.country)}</b><em>{metric==='mentions'?fmt.format(d.mentions):metric==='reach'?compact.format(d.reach):`${tone(d)>0?'+':''}${tone(d).toFixed(1)}`}</em></button>)}</section></div><section className="detail-grid"><section className="panel sentiment"><h3>{selected?`${name(selected.country)}情感构成`:'全球情感构成'}</h3>{(['positive','neutral','negative','unknown'] as Sentiment[]).map(s=>{const n=filtered.filter(a=>a.sentiment===s).length;return <button key={s} onClick={()=>setSentiment(sentiment===s?null:s)} aria-pressed={sentiment===s}><span>{s==='positive'?'正面':s==='neutral'?'中性':s==='negative'?'负面':'未知'}</span><b>{fmt.format(n)}</b><i style={{width:`${n/Math.max(filtered.length,1)*100}%`}}/></button>})}</section><Bars title="语言" items={all('language')} onSelect={setLanguage}/><Bars title="媒体来源" items={all('sourceDomain')} onSelect={setSource}/><Bars title="州 / 省" items={all('state')}/><Bars title="区域" items={all('region')}/><Bars title="城市" items={all('city')}/></section><section className="articles"><div className="section-head"><div><h2>文章证据</h2><p>{fmt.format(filtered.length)} 条结果 · 第 {page+1}/{pages} 页</p></div><div><button disabled={page===0} onClick={()=>setPage(p=>p-1)}>上一页</button><button disabled={page>=pages-1} onClick={()=>setPage(p=>p+1)}>下一页</button></div></div><div className="article-list">{filtered.slice(page*20,page*20+20).map(a=><article key={`${a.articleId}-${a.rowNumber}`}><div className="article-meta"><span>{name(a.country)}</span><span>{a.language}</span><span data-sentiment={a.sentiment}>{a.sentiment}</span><span>触达 {a.reach==null?'缺失':compact.format(a.reach)}</span></div><h3>{a.url?<a href={a.url} target="_blank" rel="noreferrer">{a.title||'无标题'}</a>:a.title||'无标题'}</h3><p>{a.matchedSentence||a.keywordSentence||'没有命中句文本'}</p><small>{a.sourceName||'未知媒体'} · {a.sourceDomain||'未知域名'}</small></article>)}</div></section></main>}
+import {Article,Sentiment,Metric,Topic,applyFilters,aggregateCountries,riverSeries,hourlyCounts,bumpSeries,topCountriesBy,propagationRows,hourOfDay,fmt,compact,name,hourLabel,TOPIC_LABEL} from './lib/data';
+import MapView from './components/MapView';
+import ThemeRiver from './components/ThemeRiver';
+import TimeBrush from './components/TimeBrush';
+import BumpChart from './components/BumpChart';
+import MediaSpread from './components/MediaSpread';
+import SidePanels from './components/SidePanels';
+import ArticleStrip from './components/ArticleStrip';
+import ArticleDrawer from './components/ArticleDrawer';
+
+type Metadata={articleCount:number;countryCount:number};
+type Data={articles:Article[];metadata:Metadata};
+
+export default function Dashboard(){
+  const[data,setData]=useState<Data|null>(null);
+  const[metric,setMetric]=useState<Metric>('mentions');
+  const[country,setCountry]=useState<string|null>(null);
+  const[topic,setTopic]=useState<Topic|null>(null);
+  const[sentiment,setSentiment]=useState<Sentiment|null>(null);
+  const[language,setLanguage]=useState<string|null>(null);
+  const[source,setSource]=useState<string|null>(null);
+  const[story,setStory]=useState<{key:string;title:string}|null>(null);
+  const[query,setQuery]=useState('');
+  const[hours,setHours]=useState<[number,number]>([0,23]);
+  const[drawer,setDrawer]=useState<Article|null>(null);
+  useEffect(()=>{Promise.all(['articles','metadata'].map(n=>fetch(`/data/${n}.json`).then(r=>r.json() as Promise<unknown>))).then(([articles,metadata])=>setData({articles,metadata} as Data))},[]);
+
+  const core=useMemo(()=>data?applyFilters(data.articles,{country,topic,sentiment,language,source,query,hours,story:story?.key??null},true):[],[data,country,topic,sentiment,language,source,query,story]);
+  const filtered=useMemo(()=>core.filter(a=>{const h=hourOfDay(a);return h>=hours[0]&&h<=hours[1]}),[core,hours]);
+  const riverBase=useMemo(()=>data?applyFilters(data.articles,{country,topic:null,sentiment,language,source,query,hours,story:story?.key??null},true):[],[data,country,sentiment,language,source,query,story]);
+  const river=useMemo(()=>riverSeries(riverBase),[riverBase]);
+  const brushCounts=useMemo(()=>hourlyCounts(core),[core]);
+  const bumpBase=useMemo(()=>data?applyFilters(data.articles,{country:null,topic,sentiment,language,source,query,hours,story:story?.key??null},true):[],[data,topic,sentiment,language,source,query,story]);
+  const propagationBase=useMemo(()=>data?applyFilters(data.articles,{country:null,topic,sentiment,language,source:null,query,hours,story:null},true):[],[data,topic,sentiment,language,query]);
+  const spread=useMemo(()=>propagationRows(propagationBase,12,story?.key??null),[propagationBase,story]);
+  const spreadBasis=useMemo(()=>{let m=1;for(const a of propagationBase){const r=a.reach||0;if(r>m)m=r}return m},[propagationBase]);
+  const bump=useMemo(()=>{
+    const top=topCountriesBy(bumpBase,8);
+    const rows=country&&!top.includes(country)?[...top.slice(0,7),country]:top;
+    return bumpSeries(bumpBase,rows,3);
+  },[bumpBase,country]);
+  const countries=useMemo(()=>aggregateCountries(filtered),[filtered]);
+  const cumulative=useMemo(()=>{const within=hours[1]>=23?core:core.filter(a=>hourOfDay(a)<=hours[1]);return aggregateCountries(within)},[core,hours]);
+  const domain=useMemo(()=>{
+    const agg=aggregateCountries(core);
+    return{maxMentions:Math.max(...agg.map(d=>d.mentions),1),maxReach:Math.max(...agg.map(d=>d.reach),1)};
+  },[core]);
+  const[playing,setPlaying]=useState(false);
+  const hoursRef=useRef(hours);useEffect(()=>{hoursRef.current=hours},[hours]);
+  useEffect(()=>{
+    if(!playing)return;
+    const id=setInterval(()=>{
+      const[a,b]=hoursRef.current;
+      if(b-a===0){
+        if(a>=23){setPlaying(false);setHours([0,23]);return}
+        setHours([a+1,a+1]);
+      }else{
+        setHours([a,a]);
+      }
+    },700);
+    return()=>clearInterval(id);
+  },[playing]);
+
+  if(!data)return <main className="loading"><h1>全球媒体舆情图谱</h1><p>正在准备全部 5,543 篇报道…</p></main>;
+  const reset=()=>{setPlaying(false);setCountry(null);setTopic(null);setSentiment(null);setLanguage(null);setSource(null);setStory(null);setQuery('');setHours([0,23])};
+  const selectStory=(key:string,title:string)=>setStory(cur=>cur&&cur.key===key?null:{key,title});
+  const sentiLabel:Record<string,string>={positive:'正面',neutral:'中性',negative:'负面',unknown:'未知'};
+  const chips:[string,()=>void][]=[
+    ...(country?[[`${name(country)}`,()=>setCountry(null)] as [string,()=>void]]:[]),
+    ...(topic?[[`话题·${TOPIC_LABEL[topic]}`,()=>setTopic(null)] as[string,()=>void]]:[]),
+    ...(sentiment?[[`情感·${sentiLabel[sentiment]}`,()=>setSentiment(null)] as[string,()=>void]]:[]),
+    ...(language?[[`语言·${language}`,()=>setLanguage(null)] as[string,()=>void]]:[]),
+    ...(source?[[`媒体·${source}`,()=>setSource(null)] as[string,()=>void]]:[]),
+    ...(story?[[`通稿·${story.title.length>18?story.title.slice(0,18)+'…':story.title}`,()=>setStory(null)] as[string,()=>void]]:[]),
+    ...(query?[[`搜索·"${query}"`,()=>setQuery('')] as[string,()=>void]]:[]),
+    ...(hours[0]>0||hours[1]<23?[[`时间·${hourLabel(hours[0])}–${hourLabel(hours[1]).replace(':00',':59')}`,()=>setHours([0,23])] as[string,()=>void]]:[]),
+  ];
+  return <main className="va">
+    <header className="va-header">
+      <div className="va-title">
+        <p className="eyebrow">GLOBAL MEDIA OPINION ATLAS</p>
+        <h1>全球媒体舆情图谱</h1>
+        <p className="subtitle">TikTok 用户迁入小红书 · 2025-01-15 全天 · 媒体报道，不代表全球公众意见</p>
+      </div>
+      <div className="va-controls">
+        <div className="segment" role="group" aria-label="地图指标">
+          {(['mentions','reach','tone'] as Metric[]).map(m=><button key={m} aria-pressed={metric===m} onClick={()=>setMetric(m)}>{m==='mentions'?'报道量':m==='reach'?'触达量':'情感偏向'}</button>)}
+        </div>
+        <input aria-label="搜索全部文章" placeholder="搜索标题、命中句、关键词或媒体" value={query} onChange={e=>setQuery(e.target.value)}/>
+        {!!chips.length&&<button className="reset" onClick={reset}>清除筛选</button>}
+      </div>
+      <div className="va-stats">
+        <div><span>报道</span><strong>{fmt.format(filtered.length)}</strong></div>
+        <div><span>潜在触达</span><strong>{compact.format(filtered.reduce((s,a)=>s+(a.reach||0),0))}</strong></div>
+        <div><span>国家</span><strong>{new Set(filtered.map(a=>a.country)).size}</strong></div>
+      </div>
+    </header>
+    {!!chips.length&&<div className="chips">{chips.map(([label,clear])=><span className="chip" key={label}>{label}<button onClick={clear} aria-label={`移除 ${label}`}>✕</button></span>)}</div>}
+    <div className="va-grid">
+      <div className="va-left">
+        <section className="panel">
+          <h3>报道热度排名演变 <small>Top 8 国家 · 按小时 · 3 小时滑动平均 · 点击曲线聚焦国家</small></h3>
+          <BumpChart rows={bump} selected={country} onSelect={setCountry}/>
+        </section>
+        <section className="panel spread-panel">
+          <h3>媒体传播 <small>同题转载的时间扩散 · 每行=一篇报道主题 · 点=转载媒体（面积∝触达） · 深描边=首发 · 点击行/点筛选</small></h3>
+          <MediaSpread rows={spread} story={story?.key??null} source={source} hours={hours} basis={spreadBasis}
+            onSelectStory={selectStory} onSelectSource={s=>setSource(source===s?null:s)}/>
+        </section>
+      </div>
+      <section className="va-main">
+        <div className="panel va-map">
+          <MapView countries={countries} cumulative={cumulative} windowEnd={hours[1]} metric={metric} selected={country} onSelect={setCountry} domain={domain}/>
+          <p className="map-legend">{metric==='tone'?'色阶：绿=偏正（＞+5）· 灰=中性 · 红=偏负（＜−5）':'色阶：'+(metric==='mentions'?'报道量':'触达量')+'（对数 · 全天固定基准）'} · 气泡面积 ∝ 累计触达（00:00 起累积） · 拖拽平移 · 滚轮缩放 · 双击复位</p>
+        </div>
+        <div className="panel va-brush">
+          <button className="play-btn" data-on={playing} onClick={()=>setPlaying(p=>!p)} aria-label={playing?'暂停播放':'播放时间轴'}>{playing?'⏸ 暂停':'▶ 播放'}</button>
+          <TimeBrush counts={brushCounts} range={hours} onChange={setHours} onInterrupt={()=>setPlaying(false)}/>
+        </div>
+        <div className="panel va-river"><ThemeRiver series={river} selected={topic} onSelect={setTopic} hours={hours}/></div>
+      </section>
+      <aside className="va-right">
+        <SidePanels filtered={filtered} country={country} language={language} source={source} sentiment={sentiment}
+          onSelectCountry={setCountry} onSelectLanguage={l=>setLanguage(language===l?null:l)} onSelectSource={s=>setSource(source===s?null:s)} onSelectSentiment={setSentiment}/>
+      </aside>
+    </div>
+    <ArticleStrip articles={filtered} onOpen={setDrawer}/>
+    <ArticleDrawer article={drawer} onClose={()=>setDrawer(null)}/>
+  </main>;
+}
