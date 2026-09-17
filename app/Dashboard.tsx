@@ -9,6 +9,7 @@ import MediaSpread from './components/MediaSpread';
 import SidePanels from './components/SidePanels';
 import ArticleStrip from './components/ArticleStrip';
 import ArticleDrawer from './components/ArticleDrawer';
+import {withBasePath} from './lib/asset-path.mjs';
 
 type Metadata={articleCount:number;countryCount:number};
 type Data={articles:Article[];metadata:Metadata};
@@ -25,7 +26,7 @@ export default function Dashboard(){
   const[query,setQuery]=useState('');
   const[hours,setHours]=useState<[number,number]>([0,23]);
   const[drawer,setDrawer]=useState<Article|null>(null);
-  useEffect(()=>{Promise.all(['articles','metadata'].map(n=>fetch(`/data/${n}.json`).then(r=>r.json() as Promise<unknown>))).then(([articles,metadata])=>setData({articles,metadata} as Data))},[]);
+  useEffect(()=>{Promise.all(['articles','metadata'].map(n=>fetch(withBasePath(`/data/${n}.json`,import.meta.env.BASE_URL)).then(r=>r.json() as Promise<unknown>))).then(([articles,metadata])=>setData({articles,metadata} as Data))},[]);
 
   const core=useMemo(()=>data?applyFilters(data.articles,{country,topic,sentiment,language,source,query,hours,story:story?.key??null},true):[],[data,country,topic,sentiment,language,source,query,story]);
   const filtered=useMemo(()=>core.filter(a=>{const h=hourOfDay(a);return h>=hours[0]&&h<=hours[1]}),[core,hours]);

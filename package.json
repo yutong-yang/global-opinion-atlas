@@ -9,10 +9,12 @@
     "dev": "vinext dev",
     "dev:local": "LOCAL_PREVIEW=1 vinext dev",
     "build": "vinext build",
+    "build:pages": "vite build --config vite.pages.config.ts",
     "start": "vinext start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "data:build": "node scripts/build-data.mjs",
-    "test:data": "node --test scripts/build-data.test.mjs"
+    "test:data": "node --test scripts/build-data.test.mjs",
+    "test:pages": "node --test scripts/asset-path.test.mjs"
   },
   "dependencies": {
     "@d3-maps/atlas": "^1.0.1",
