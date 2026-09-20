@@ -96,6 +96,7 @@ export default function MediaSpread({rows,platforms,story,source,hours,basis,onS
         return <div key={row.key} className={(dimmed?'spread-row dim':'spread-row')+(story===row.key?' sel':'')}
           onClick={()=>onSelectStory(row.key,row.title)}>
           <div className="spread-head" title={`${row.title}\n首发 ${row.firstDomain} ${row.firstTime} · ${row.count} 篇 · ${row.domains} 家媒体`}>
+            {i<10&&<b className="spread-rank">{i+1}</b>}
             <span className="spread-title">{row.title}</span><b>{row.domains} 家</b>
           </div>
           <svg width={innerW} height={TRACK}>

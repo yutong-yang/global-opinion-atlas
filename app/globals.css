@@ -57,6 +57,8 @@ button,input{font:inherit}button{cursor:pointer}h1,h2,h3,p{margin-top:0}
 .spread-panel{flex:1 1 0;min-height:0;display:flex;flex-direction:column}
 .spread-panel>h3{flex:none}
 .spread-body{position:relative;flex:1;min-height:0;display:flex;flex-direction:column}
+.spread-rank{flex:none;width:18px;height:18px;border-radius:50%;background:#94a3b8;color:#fff;font-size:10px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;margin-right:4px;vertical-align:middle}
+.spread-row:nth-child(-n+3) .spread-rank{background:#3765d5}
 .spread-wrap{flex:1;min-height:0;overflow:hidden auto}
 .spread-axis{flex:none;display:block;margin-top:2px}
 .spread-row{height:29px;padding:1px 4px;border-radius:7px;cursor:pointer;overflow:hidden}
@@ -66,6 +68,7 @@ button,input{font:inherit}button{cursor:pointer}h1,h2,h3,p{margin-top:0}
 .spread-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;height:13px;line-height:13px}
 .spread-title{flex:1;font-size:11px;color:#344054;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .spread-head b{flex:none;font-size:10.5px;color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums}
+.spread-rank{color:#fff!important}
 .spread-row svg{display:block}
 .spread-window{fill:var(--blue);fill-opacity:.07;stroke:var(--blue);stroke-opacity:.25}
 .spread-meter{fill:var(--blue);fill-opacity:.3}
@@ -146,6 +149,8 @@ button,input{font:inherit}button{cursor:pointer}h1,h2,h3,p{margin-top:0}
 .axis-label{fill:#98a2b3;font-size:10px}
 
 .river-wrap{position:relative}
+.river-head{flex:none;display:flex;align-items:center;gap:12px;margin-bottom:6px;flex-wrap:wrap}
+.river-kw-text{font-size:10px;fill:#fff;font-weight:600;paint-order:stroke;stroke:rgba(15,23,42,.55);stroke-width:3px;stroke-linejoin:round;pointer-events:none}
 .river-box .empty{font-size:12px;padding:10px}
 .river-band{cursor:pointer;stroke:#fff;stroke-width:.5;transition:opacity .2s}
 .river-label{font-size:9.5px;font-weight:600;fill:#fff;pointer-events:none;paint-order:stroke;stroke:rgba(15,23,42,.28);stroke-width:2.5px;stroke-linejoin:round;letter-spacing:.2px}

@@ -102,17 +102,4 @@ describe('Dashboard agent linkage', () => {
     expect(prompt).toContain('1. 报道 United States · 2 家媒体 6 篇 · 峰值 10:00');
     expect(prompt).toContain('热度=报道媒体数（跨媒体转载广度），不是单帖点赞数');
   });
-
-  it('点击热榜行应用通稿筛选并切回证据列表', async () => {
-    render(<Dashboard />);
-    await waitFor(() => expect(screen.queryByText(/正在准备/)).not.toBeInTheDocument());
-
-    fireEvent.click(screen.getByRole('tab', {name: /热榜/}));
-    const rows = document.querySelectorAll('.hot-row');
-    expect(rows).toHaveLength(3);
-    fireEvent.click(rows[0]);
-
-    await waitFor(() => expect(screen.getByLabelText('移除 通稿·报道 United States')).toBeInTheDocument());
-    expect(screen.getByRole('tab', {name: /文章证据/})).toHaveAttribute('aria-selected', 'true');
-  });
 });

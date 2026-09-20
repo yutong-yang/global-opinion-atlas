@@ -38,7 +38,14 @@ export default function Dashboard(){
   const bumpBase=useMemo(()=>data?applyFilters(data.articles,{country:null,sentiment,language,source,query,hours,story:story?.key??null},true):[],[data,sentiment,language,source,query,story]);
   const propagationBase=useMemo(()=>data?applyFilters(data.articles,{country:null,sentiment,language,source:null,query,hours,story:null},true):[],[data,sentiment,language,query]);
   const platforms=useMemo(()=>data?buildPlatformColors(data.articles):null,[data]);
-  const spread=useMemo(()=>propagationRows(propagationBase,12,story?.key??null),[propagationBase,story]);
+  const spreadFiltered=useMemo(()=>{
+    const winEnd=hours[1]*60+59;
+    return propagationBase.filter(a=>{
+      const h=hourOfDay(a);
+      return h>=hours[0]&&h<=hours[1]&&(h<hours[1]||(a.publishTime&&parseInt(a.publishTime.split(':')[0])*60+parseInt(a.publishTime.split(':')[1])<=winEnd));
+    });
+  },[propagationBase,hours]);
+  const spread=useMemo(()=>propagationRows(spreadFiltered,12,story?.key??null),[spreadFiltered,story]);
   const spreadBasis=useMemo(()=>{let m=1;for(const a of propagationBase){const r=a.reach||0;if(r>m)m=r}return m},[propagationBase]);
   const mediaRiver=useMemo(()=>buildMediaRiver(propagationBase,12),[propagationBase]);
   const repostNet=useMemo(()=>buildRepostNetwork(propagationBase),[propagationBase]);
@@ -176,11 +183,11 @@ export default function Dashboard(){
       </section>
       <aside className="va-right">
         <section className="panel spread-panel">
-          <h3>媒体传播 <small>同题转载的时间扩散 · 每行=一篇报道主题 · 点=转载媒体（面积∝触达 · 色=平台） · 深描边=首发 · 点击行/点筛选</small></h3>
+          <h3>热榜 <small>同题转载的时间扩散 · 每行=一篇报道主题 · 点=转载媒体（面积∝触达 · 色=平台） · 深描边=首发 · 点击行/点筛选</small></h3>
           <MediaSpread rows={spread} platforms={platforms} story={story?.key??null} source={source} hours={hours} basis={spreadBasis}
             onSelectStory={selectStory} onSelectSource={s=>selectSource(source===s?null:s)}/>
         </section>
-        <EvidencePanel articles={filtered} platforms={platforms} hot={hot} onSelectStory={selectStory} onOpen={setDrawer}/>
+        <EvidencePanel articles={filtered} platforms={platforms} onOpen={setDrawer}/>
       </aside>
     </div>
     <ArticleDrawer article={drawer} platforms={platforms} onClose={()=>setDrawer(null)}/>

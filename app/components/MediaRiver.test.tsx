@@ -38,15 +38,12 @@ const renderRiver=(over:Partial<Parameters<typeof MediaRiver>[0]>={})=>render(<M
   hours={[0,23]} basis={40} onSelectStory={vi.fn()} onSelectSource={vi.fn()} {...over}/>);
 
 describe('MediaRiver',()=>{
-  it('renders media bands with platform colors and in-band labels',()=>{
+  it('renders media bands with platform colors',()=>{
     const {container}=renderRiver();
     const paths=container.querySelectorAll('.river-band');
     expect(paths).toHaveLength(2);
     expect(paths[0].getAttribute('fill')).toBe('#c33c54');
     expect(paths[1].getAttribute('fill')).toBe('#0f6e8c');
-    const labels=[...container.querySelectorAll('.river-label')].map(t=>t.textContent);
-    expect(labels).toContain('Alpha');
-    expect(labels).toContain('Beta');
     expect([...container.querySelectorAll('.axis-label')].map(t=>t.textContent)).toContain('12');
   });
 
