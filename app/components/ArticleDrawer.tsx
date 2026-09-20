@@ -1,10 +1,10 @@
 'use client';
 import {useEffect} from 'react';
-import {Article,name,fmt,compact} from '../lib/data';
+import {Article,PlatformColors,PLATFORM_OTHER,name,fmt,compact} from '../lib/data';
 
 const sentiLabel:Record<string,string>={positive:'正面',neutral:'中性',negative:'负面',unknown:'未知'};
 
-export default function ArticleDrawer({article,onClose}:{article:Article|null;onClose:()=>void}){
+export default function ArticleDrawer({article,platforms,onClose}:{article:Article|null;platforms:PlatformColors|null;onClose:()=>void}){
   useEffect(()=>{
     if(!article)return;
     const h=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose()};
@@ -22,7 +22,7 @@ export default function ArticleDrawer({article,onClose}:{article:Article|null;on
         <span>{article.publishTime||''} · 2025-01-15</span>
       </div>
       <h2>{article.url?<a href={article.url} target="_blank" rel="noreferrer">{article.title||'无标题'}</a>:article.title||'无标题'}</h2>
-      <p className="drawer-source">{article.sourceName||'未知媒体'} · {article.sourceDomain||'未知域名'}</p>
+      <p className="drawer-source"><i className="plat-dot" style={{background:platforms?platforms.colorOf(article.sourceDomain||''):PLATFORM_OTHER}}/>{article.sourceName||'未知媒体'} · {article.sourceDomain||'未知域名'}</p>
       <dl className="drawer-stats">
         <div><dt>潜在触达</dt><dd>{article.reach==null?'缺失':compact.format(article.reach)}</dd></div>
         <div><dt>互动量</dt><dd>{article.engagement==null?'缺失':fmt.format(article.engagement)}</dd></div>

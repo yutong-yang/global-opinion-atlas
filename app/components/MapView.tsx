@@ -8,9 +8,11 @@ import {CountryStat,Metric,toneOf,fmt,compact,name} from '../lib/data';
 type Tip={x:number;y:number;html:string};
 type View={k:number;x:number;y:number};
 
-export default function MapView({countries,cumulative,windowEnd,metric,selected,onSelect,domain}:{countries:CountryStat[];cumulative:CountryStat[];windowEnd:number;metric:Metric;selected:string|null;onSelect:(c:string)=>void;domain:{maxMentions:number;maxReach:number}}){
+export default function MapView({countries,cumulative,windowEnd,selected,onSelect,domain}:{countries:CountryStat[];cumulative:CountryStat[];windowEnd:number;selected:string|null;onSelect:(c:string)=>void;domain:{maxMentions:number;maxReach:number}}){
+  const[metric,setMetric]=useState<Metric>('mentions');
   const ref=useRef<HTMLDivElement>(null);
   const[dim,setDim]=useState({w:860,h:420});
+  const[fit,setFit]=useState({w:860,h:420});
   const[view,setView]=useState<View>({k:1,x:0,y:0});
   const[tip,setTip]=useState<Tip|null>(null);
   const[dragging,setDragging]=useState(false);
@@ -19,11 +21,15 @@ export default function MapView({countries,cumulative,windowEnd,metric,selected,
   const dimRef=useRef(dim);dimRef.current=dim;
   useEffect(()=>{
     const e=ref.current;if(!e)return;
-    const measure=()=>setDim({w:Math.max(240,e.clientWidth||860),h:Math.max(180,e.clientHeight||420)});
-    measure();
-    const o=new ResizeObserver(measure);o.observe(e);
-    return()=>o.disconnect();
+    const measure=()=>{const d={w:Math.max(240,e.clientWidth||860),h:Math.max(180,e.clientHeight||420)};setDim(d);return d};
+    setFit(measure());
+    const o=new ResizeObserver(()=>measure());o.observe(e);
+    const onWin=()=>setFit(measure());
+    window.addEventListener('resize',onWin);
+    return()=>{o.disconnect();window.removeEventListener('resize',onWin)};
   },[]);
+  // 投影基准 fit 与容器实测 dim 解耦：容器尺寸变化只裁剪地图，不重新拟合；仅挂载、窗口 resize、重置视图时重拟合
+  const resetView=()=>{setFit({w:dimRef.current.w,h:dimRef.current.h});setView({k:1,x:0,y:0})};
   const clamped=(v:View):View=>{
     const{w,h}=dimRef.current;
     const k=Math.min(7,Math.max(1,v.k));
@@ -68,7 +74,7 @@ export default function MapView({countries,cumulative,windowEnd,metric,selected,
   };
   const w=dim.w,h=dim.h;
   const shapes=useMemo(()=>(feature(Countries110m as never,(Countries110m as any).objects.features) as any).features,[]);
-  const projection=useMemo(()=>geoNaturalEarth1().fitExtent([[6,6],[w-6,h-6]],{type:'FeatureCollection',features:shapes} as never),[shapes,w,h]);
+  const projection=useMemo(()=>geoNaturalEarth1().fitExtent([[6,6],[fit.w-6,fit.h-6]],{type:'FeatureCollection',features:shapes} as never),[shapes,fit.w,fit.h]);
   const path=useMemo(()=>geoPath(projection),[projection]);
   const byIso=new Map(countries.map(d=>[d.iso3,d]));
   const fill=(d?:CountryStat)=>{
@@ -90,7 +96,12 @@ export default function MapView({countries,cumulative,windowEnd,metric,selected,
     return{x:c[0],y:c[1],d};
   }).filter(Boolean) as{x:number;y:number;d:CountryStat}[];
   const zoomed=view.k!==1||view.x!==0||view.y!==0;
-  return <div ref={ref} className={dragging?'map-wrap dragging':'map-wrap'} role="img" aria-label="全球媒体舆情国家分布地图" onPointerDown={down} onDoubleClick={()=>setView({k:1,x:0,y:0})}>
+  return <div ref={ref} className={dragging?'map-wrap dragging':'map-wrap'} role="img" aria-label="全球媒体舆情国家分布地图" onPointerDown={down} onDoubleClick={resetView}>
+    <div className="map-controls">
+      <div className="segment" role="group" aria-label="地图指标">
+        {(['mentions','reach','tone'] as Metric[]).map(m=><button key={m} aria-pressed={metric===m} onClick={()=>setMetric(m)}>{m==='mentions'?'报道量':m==='reach'?'触达量':'情感偏向'}</button>)}
+      </div>
+    </div>
     <svg width={w} height={h}>
       <g transform={`translate(${view.x} ${view.y}) scale(${view.k})`}>
         {shapes.map((s:any)=>{
@@ -107,7 +118,8 @@ export default function MapView({countries,cumulative,windowEnd,metric,selected,
           onMouseLeave={()=>setTip(null)}/>)}
       </g>
     </svg>
-    {zoomed&&<button className="map-reset" onClick={()=>setView({k:1,x:0,y:0})}>重置视图</button>}
+    <p className="map-legend">{metric==='tone'?'色阶：绿=偏正（＞+5）· 灰=中性 · 红=偏负（＜−5）':'色阶：'+(metric==='mentions'?'报道量':'触达量')+'（对数 · 全天固定基准）'} · 气泡面积 ∝ 累计触达（00:00 起累积） · 拖拽平移 · 滚轮缩放 · 双击复位</p>
+    {zoomed&&<button className="map-reset" onClick={resetView}>重置视图</button>}
     {tip&&<div className="tip" style={{left:tip.x,top:tip.y}} dangerouslySetInnerHTML={{__html:tip.html}}/>}
   </div>;
 }

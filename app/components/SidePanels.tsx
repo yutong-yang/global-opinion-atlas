@@ -1,6 +1,6 @@
 'use client';
 import {useMemo} from 'react';
-import {Article,Sentiment,CountryStat,name,fmt,compact,toneOf,fieldCounts,mediaByReach} from '../lib/data';
+import {Article,Sentiment,PlatformColors,CountryStat,name,fmt,compact,toneOf,fieldCounts,mediaByReach} from '../lib/data';
 
 function Diverging({items,selected,onSelect}:{items:{c:CountryStat;neg:number;pos:number}[];selected:string|null;onSelect:(c:string)=>void}){
   return <div className="diverging">{items.map(({c,neg,pos})=><button key={c.country} className={selected===c.country?'div-row active':'div-row'} onClick={()=>onSelect(selected===c.country?'':c.country)}
@@ -14,17 +14,17 @@ function Diverging({items,selected,onSelect}:{items:{c:CountryStat;neg:number;po
   </button>)}</div>;
 }
 
-function Bars({title,items,format,selected,onSelect}:{title:string;items:[string,number][];format?:(n:number)=>string;selected?:string|null;onSelect?:(v:string)=>void}){
+function Bars({title,items,format,colorOf,selected,onSelect}:{title:string;items:[string,number][];format?:(n:number)=>string;colorOf?:(v:string)=>string;selected?:string|null;onSelect?:(v:string)=>void}){
   const max=Math.max(...items.map(x=>x[1]),1);
   return <section className="panel side-panel">
     <h3>{title}</h3>
     <div className="bars">{items.map(([n,v])=><button key={n} className={onSelect&&selected===n?'bar active':'bar'} disabled={!onSelect} onClick={()=>onSelect?.(n)}>
-      <span>{n}</span><i style={{width:`${v/max*100}%`}}/><b>{format?format(v):fmt.format(v)}</b>
+      <span>{colorOf&&<i className="plat-dot" style={{background:colorOf(n)}}/>}{n}</span><i style={{width:`${v/max*100}%`}}/><b>{format?format(v):fmt.format(v)}</b>
     </button>)}</div>
   </section>;
 }
 
-export default function SidePanels({filtered,country,language,source,sentiment,onSelectCountry,onSelectLanguage,onSelectSource,onSelectSentiment}:{filtered:Article[];country:string|null;language:string|null;source:string|null;sentiment:Sentiment|null;onSelectCountry:(c:string)=>void;onSelectLanguage:(l:string)=>void;onSelectSource:(s:string)=>void;onSelectSentiment:(s:Sentiment|null)=>void}){
+export default function SidePanels({filtered,platforms,country,language,source,sentiment,onSelectCountry,onSelectLanguage,onSelectSource,onSelectSentiment}:{filtered:Article[];platforms:PlatformColors|null;country:string|null;language:string|null;source:string|null;sentiment:Sentiment|null;onSelectCountry:(c:string)=>void;onSelectLanguage:(l:string)=>void;onSelectSource:(s:string)=>void;onSelectSentiment:(s:Sentiment|null)=>void}){
   const sentimentItems=useMemo(()=>{
     const m=new Map<string,CountryStat>();
     for(const a of filtered){
@@ -50,7 +50,7 @@ export default function SidePanels({filtered,country,language,source,sentiment,o
       </div>
       <Diverging items={sentimentItems} selected={country} onSelect={onSelectCountry}/>
     </section>
-    <Bars title="媒体触达榜 Top10" items={media} format={v=>compact.format(v)} onSelect={onSelectSource} selected={source}/>
+    <Bars title="媒体触达榜 Top10" items={media} format={v=>compact.format(v)} colorOf={platforms?platforms.colorOf:undefined} onSelect={onSelectSource} selected={source}/>
     <Bars title="语言分布" items={langs} onSelect={onSelectLanguage} selected={language}/>
   </>;
 }
