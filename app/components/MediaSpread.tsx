@@ -103,7 +103,7 @@ export default function MediaSpread({rows,platforms,story,source,hours,basis,onS
             <rect className="spread-window" x={x0} y={0.5} width={Math.max(0,x1-x0)} height={TRACK-2} rx={2.5}/>
             <rect className="spread-meter" x={PAD} y={TRACK-2.2} width={Math.max(0,(innerW-2*PAD)*cum[i]/rowMax)} height={1.9} rx={1}/>
             {row.dots.map((d,j)=>{
-              const inWin=d.hour>=hours[0]&&d.hour<=hours[1];
+              const inWin=d.hour<=hours[1];
               let op=inWin?1:.16;
               if(source&&d.domain!==source)op*=.3;
               const isStory=story===row.key;

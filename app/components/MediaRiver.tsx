@@ -173,7 +173,6 @@ export default function MediaRiver({bands,dots,platforms,story,source,country,ho
     </div>}
     <div ref={ref} className="river-box">
       {!bands.length?<p className="empty">当前筛选下没有媒体报道</p>:<svg width={W} height={H}>
-        {kwLabels.map((kw,i)=><text key={i} x={kw.x} y={kw.y} textAnchor="middle" className="river-kw-text">{kw.word}</text>)}
         {layers.map(l=><path key={l.b.domain} className="river-band" d={l.d} fill={colorOf(l.b.domain)}
           opacity={story?storyDoms.has(l.b.domain)?1:.08:source?l.b.domain===source?1:.08:country?countryDoms.has(l.b.domain)?1:.08:l.active?1:.12}
           onMouseMove={e=>tipAt(e,`<b>${l.b.name}</b> · ${l.b.domain}<br>全天 ${l.b.articles} 篇 · 触达 ${compact.format(l.b.reach)}`)}
@@ -225,6 +224,7 @@ export default function MediaRiver({bands,dots,platforms,story,source,country,ho
           if(!ticks.length||ticks[ticks.length-1]!==hours[1])ticks.push(hours[1]);
           return ticks.map(h=><text key={h} x={x(h)} y={H-1} textAnchor="middle" className="axis-label">{String(h).padStart(2,'0')}</text>);
         })()}
+        {kwLabels.map((kw,i)=><text key={i} x={kw.x} y={kw.y} textAnchor="middle" className="river-kw-text">{kw.word}</text>)}
       </svg>}
     </div>
     {tip&&<div className="tip" style={{left:tip.x,top:tip.y}} dangerouslySetInnerHTML={{__html:tip.html}}/>}

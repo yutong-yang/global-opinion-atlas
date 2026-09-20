@@ -42,7 +42,7 @@ export default function Dashboard(){
     const winEnd=hours[1]*60+59;
     return propagationBase.filter(a=>{
       const h=hourOfDay(a);
-      return h>=hours[0]&&h<=hours[1]&&(h<hours[1]||(a.publishTime&&parseInt(a.publishTime.split(':')[0])*60+parseInt(a.publishTime.split(':')[1])<=winEnd));
+      return h<=hours[1]&&(h<hours[1]||(a.publishTime&&parseInt(a.publishTime.split(':')[0])*60+parseInt(a.publishTime.split(':')[1])<=winEnd));
     });
   },[propagationBase,hours]);
   const spread=useMemo(()=>propagationRows(spreadFiltered,12,story?.key??null),[spreadFiltered,story]);
@@ -93,13 +93,9 @@ export default function Dashboard(){
   useEffect(()=>{
     if(!playing)return;
     const id=setInterval(()=>{
-      const[a,b]=hoursRef.current;
-      if(b-a===0){
-        if(a>=23){setPlaying(false);setHours([0,23]);return}
-        setHours([a+1,a+1]);
-      }else{
-        setHours([a,a]);
-      }
+      const[,b]=hoursRef.current;
+      if(b>=23){setPlaying(false);return}
+      setHours([0,b+1]);
     },700);
     return()=>clearInterval(id);
   },[playing]);
@@ -168,7 +164,7 @@ export default function Dashboard(){
                 onSelectSource={s=>selectSource(source===s?null:s)}/>}
         </div>
         <div className="panel va-brush">
-          <button className="play-btn" data-on={playing} onClick={()=>setPlaying(p=>!p)} aria-label={playing?'暂停播放':'播放时间轴'}>{playing?'⏸ 暂停':'▶ 播放'}</button>
+          <button className="play-btn" data-on={playing} onClick={()=>{if(!playing)setHours([0,hours[1]>=23?0:hours[1]]);setPlaying(p=>!p)}} aria-label={playing?'暂停播放':'播放时间轴'}>{playing?'⏸ 暂停':'▶ 播放'}</button>
           <TimeBrush counts={brushCounts} range={hours} onChange={setHours} onInterrupt={()=>setPlaying(false)} playing={playing}/>
         </div>
         <div className="panel va-river">
