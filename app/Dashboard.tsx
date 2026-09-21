@@ -9,6 +9,7 @@ import MediaSpread from './components/MediaSpread';
 import MediaNetwork from './components/MediaNetwork';
 import MediaCircles from './components/MediaCircles';
 import SidePanels from './components/SidePanels';
+import RegionPanel from './components/RegionPanel';
 import EvidencePanel from './components/EvidencePanel';
 import ArticleDrawer from './components/ArticleDrawer';
 import {withBasePath} from './lib/asset-path.mjs';
@@ -22,6 +23,7 @@ type Data={articles:Article[];metadata:Metadata};
 export default function Dashboard(){
   const[data,setData]=useState<Data|null>(null);
   const[country,setCountry]=useState<string|null>(null);
+  const[state,setState]=useState<string|null>(null);
   const[sentiment,setSentiment]=useState<Sentiment|null>(null);
   const[language,setLanguage]=useState<string|null>(null);
   const[source,setSource]=useState<string|null>(null);
@@ -32,12 +34,13 @@ export default function Dashboard(){
   const[canvas,setCanvas]=useState<'map'|'network'|'circles'>('map');
   useEffect(()=>{Promise.all(['articles','metadata'].map(n=>fetch(withBasePath(`/data/${n}.json`,import.meta.env.BASE_URL)).then(r=>r.json() as Promise<unknown>))).then(([articles,metadata])=>setData({articles,metadata} as Data))},[]);
 
-  const core=useMemo(()=>data?applyFilters(data.articles,{country,sentiment,language,source,query,hours,story:story?.key??null},true):[],[data,country,sentiment,language,source,query,story]);
+  const core=useMemo(()=>data?applyFilters(data.articles,{country,state,sentiment,language,source,query,hours,story:story?.key??null},true):[],[data,country,state,sentiment,language,source,query,story]);
   const filtered=useMemo(()=>core.filter(a=>{const h=hourOfDay(a);return h>=hours[0]&&h<=hours[1]}),[core,hours]);
+  const regionBase=useMemo(()=>data?applyFilters(data.articles,{country,state:null,sentiment,language,source,query,hours,story:story?.key??null},true).filter(a=>{const h=hourOfDay(a);return h>=hours[0]&&h<=hours[1]}):[],[data,country,sentiment,language,source,query,story,hours]);
   const brushCounts=useMemo(()=>hourlyCounts(core),[core]);
-  const bumpBase=useMemo(()=>data?applyFilters(data.articles,{country:null,sentiment,language,source,query,hours,story:story?.key??null},true):[],[data,sentiment,language,source,query,story]);
-  const propagationBase=useMemo(()=>data?applyFilters(data.articles,{country:null,sentiment,language,source:null,query,hours,story:null},true):[],[data,sentiment,language,query]);
-  const platforms=useMemo(()=>data?buildPlatformColors(data.articles):null,[data]);
+  const bumpBase=useMemo(()=>data?applyFilters(data.articles,{country:null,state:null,sentiment,language,source,query,hours,story:story?.key??null},true):[],[data,sentiment,language,source,query,story,hours]);
+  const propagationBase=useMemo(()=>data?applyFilters(data.articles,{country,state,sentiment,language,source:null,query,hours,story:null},true):[],[data,country,state,sentiment,language,query,hours]);
+  const platforms=useMemo(()=>data?buildPlatformColors(data.articles,propagationBase):null,[data,propagationBase]);
   const spreadFiltered=useMemo(()=>{
     const winEnd=hours[1]*60+59;
     return propagationBase.filter(a=>{
@@ -45,9 +48,9 @@ export default function Dashboard(){
       return h<=hours[1]&&(h<hours[1]||(a.publishTime&&parseInt(a.publishTime.split(':')[0])*60+parseInt(a.publishTime.split(':')[1])<=winEnd));
     });
   },[propagationBase,hours]);
-  const spread=useMemo(()=>propagationRows(spreadFiltered,12,story?.key??null),[spreadFiltered,story]);
+  const spread=useMemo(()=>propagationRows(spreadFiltered,15,story?.key??null),[spreadFiltered,story]);
   const spreadBasis=useMemo(()=>{let m=1;for(const a of propagationBase){const r=a.reach||0;if(r>m)m=r}return m},[propagationBase]);
-  const mediaRiver=useMemo(()=>buildMediaRiver(propagationBase,12),[propagationBase]);
+  const mediaRiver=useMemo(()=>buildMediaRiver(propagationBase,15),[propagationBase]);
   const repostNet=useMemo(()=>buildRepostNetwork(propagationBase),[propagationBase]);
   const mediaOutlets=useMemo(()=>buildMediaOutlets(propagationBase),[propagationBase]);
   const bump=useMemo(()=>{
@@ -101,9 +104,9 @@ export default function Dashboard(){
   },[playing]);
 
   if(!data)return <main className="loading"><h1>全球媒体舆情图谱</h1><p>正在准备全部 5,543 篇报道…</p></main>;
-  const reset=()=>{setPlaying(false);setCountry(null);setSentiment(null);setLanguage(null);setSource(null);setStory(null);setQuery('');setHours([0,23])};
+  const reset=()=>{setPlaying(false);setCountry(null);setState(null);setSentiment(null);setLanguage(null);setSource(null);setStory(null);setQuery('');setHours([0,23])};
   const selectStory=(key:string,title:string)=>setStory(cur=>cur&&cur.key===key?null:{key,title});
-  const selectCountry=(c:string|null)=>{setCountry(c);if(c)setSource(null)};
+  const selectCountry=(c:string|null)=>{setCountry(c);if(c)setSource(null);setState(null)};
   const selectSource=(s:string|null)=>{setSource(s);if(s)setCountry(null)};
   const applyAgentAction=(action:AgentAction)=>{
     switch(action.type){
@@ -116,6 +119,7 @@ export default function Dashboard(){
   const sentiLabel:Record<string,string>={positive:'正面',neutral:'中性',negative:'负面',unknown:'未知'};
   const chips:[string,()=>void][]=[
     ...(country?[[`${name(country)}`,()=>setCountry(null)] as [string,()=>void]]:[]),
+    ...(state?[[`地区·${state}`,()=>setState(null)] as [string,()=>void]]:[]),
     ...(sentiment?[[`情感·${sentiLabel[sentiment]}`,()=>setSentiment(null)] as[string,()=>void]]:[]),
     ...(language?[[`语言·${language}`,()=>setLanguage(null)] as[string,()=>void]]:[]),
     ...(source?[[`媒体·${source}`,()=>setSource(null)] as[string,()=>void]]:[]),
@@ -145,6 +149,7 @@ export default function Dashboard(){
       <div className="va-left">
         <SidePanels filtered={filtered} platforms={platforms} country={country} language={language} source={source} sentiment={sentiment}
           onSelectCountry={selectCountry} onSelectLanguage={l=>setLanguage(language===l?null:l)} onSelectSource={s=>selectSource(source===s?null:s)} onSelectSentiment={setSentiment}/>
+        <RegionPanel filtered={regionBase} country={country} selectedState={state} onSelectState={setState}/>
       </div>
       <section className={canvas==='map'?'va-main':'va-main net'}>
         <div className="panel va-map">
@@ -168,7 +173,7 @@ export default function Dashboard(){
           <TimeBrush counts={brushCounts} range={hours} onChange={setHours} onInterrupt={()=>setPlaying(false)} playing={playing}/>
         </div>
         <div className="panel va-river">
-          <h3>媒体发文河流 <small>带=媒体（全天发文量 Top 12 · 厚度∝全天逐时发文 · 色同平台色） · 点=同题转载簇报道（色=话题 · 面积∝触达） · 线=跨媒体转播路径 · 点/线选通稿 · 带筛选媒体</small></h3>
+          <h3>媒体发文河流 <small>带=媒体（全天发文量 Top 15 · 厚度∝全天逐时发文 · 色同平台色） · 点=同题转载簇报道（色=话题 · 面积∝触达） · 线=跨媒体转播路径 · 点/线选通稿 · 带筛选媒体</small></h3>
           <MediaRiver bands={mediaRiver.bands} dots={mediaRiver.dots} platforms={platforms} story={story?.key??null} source={source} country={country}
             hours={hours} basis={spreadBasis} onSelectStory={selectStory} onSelectSource={s=>selectSource(source===s?null:s)}/>
         </div>

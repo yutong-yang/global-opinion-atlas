@@ -9,13 +9,13 @@ export type Article={
 export type CountryStat={country:string;iso3:string|null;mentions:number;reach:number;positive:number;neutral:number;negative:number;unknown:number};
 export type Metric='mentions'|'reach'|'tone';
 export type Filters={
-  country:string|null;sentiment:Sentiment|null;language:string|null;
+  country:string|null;state:string|null;sentiment:Sentiment|null;language:string|null;
   source:string|null;query:string;hours:[number,number];story:string|null;
 };
 
 export const BUMP_COLORS=['#3765d5','#d34f7c','#e8863a','#31a37e','#8b5cf6','#0ea5b7','#b08a00','#64748b'];
 
-export const PLATFORM_PALETTE=['#c33c54','#0f6e8c','#6d5aa5','#5a7d2a','#a8662e','#27548c','#b04a8f','#77683d','#2e8c6a','#476b7e'];
+export const PLATFORM_PALETTE=['#c33c54','#0f6e8c','#6d5aa5','#5a7d2a','#a8662e','#27548c','#b04a8f','#77683d','#2e8c6a','#476b7e','#c47a2c','#3d7ea1','#8b5e3c','#6a8e4e','#9c4e7c'];
 export const PLATFORM_OTHER='#94a3b8';
 
 export type PlatformColors={
@@ -25,7 +25,7 @@ export type PlatformColors={
 };
 
 // 平台集合与颜色只由全量语料决定，不随筛选重算（固定基准原则）
-export function buildPlatformColors(articles:Article[]):PlatformColors{
+export function buildPlatformColors(articles:Article[],filteredArticles?:Article[]):PlatformColors{
   const groups=new Map<string,Set<string>>();
   for(const a of articles){
     const d=(a.sourceDomain||'').trim();
@@ -45,6 +45,22 @@ export function buildPlatformColors(articles:Article[]):PlatformColors{
     .slice(0,PLATFORM_PALETTE.length)
     .map(e=>e[0]);
   const colorOf=(d:string)=>{const i=top.indexOf(d);return i<0?PLATFORM_OTHER:PLATFORM_PALETTE[i]};
+  if(filteredArticles!==undefined){
+    participation.clear();
+    const fg=new Map<string,Set<string>>();
+    for(const a of filteredArticles){
+      const d=(a.sourceDomain||'').trim();
+      const k=normalizeTitle(a.title);
+      if(!d||!k)continue;
+      let s=fg.get(k);
+      if(!s){s=new Set();fg.set(k,s)}
+      s.add(d);
+    }
+    for(const s of fg.values()){
+      if(s.size<2)continue;
+      for(const d of s)participation.set(d,(participation.get(d)||0)+1);
+    }
+  }
   return {top,colorOf,participation};
 }
 
@@ -80,6 +96,7 @@ export function applyFilters(articles:Article[],f:Filters,ignoreHours=false):Art
   return articles.filter(a=>{
     if(!ignoreHours){const h=hourOfDay(a);if(h<h0||h>h1)return false}
     if(f.country&&a.country!==f.country)return false;
+    if(f.state&&((a.state||'').trim())!==f.state)return false;
     if(f.sentiment&&a.sentiment!==f.sentiment)return false;
     if(f.language&&a.language!==f.language)return false;
     if(f.source&&a.sourceDomain!==f.source)return false;
@@ -402,4 +419,28 @@ export function mediaInfluence(articles:Article[],n:number):MediaInfluence[]{
     .map(([domain,e])=>({domain,name:e.name,reach:e.reach,articles:e.articles,countries:e.countries.size}))
     .sort((a,b)=>b.reach-a.reach||a.domain.localeCompare(b.domain))
     .slice(0,Math.max(1,n));
+}
+
+export type RegionStat={name:string;articles:number;reach:number;cities:Map<string,number>};
+
+export function regionBreakdown(articles:Article[]):{states:RegionStat[];totalWithState:number;totalWithCity:number}{
+  const sm=new Map<string,RegionStat>();
+  let totalWithState=0,totalWithCity=0;
+  for(const a of articles){
+    const s=(a.state||'').trim();
+    if(s){
+      totalWithState++;
+      let e=sm.get(s);
+      if(!e){e={name:s,articles:0,reach:0,cities:new Map()};sm.set(s,e)}
+      e.articles++;
+      e.reach+=a.reach||0;
+      const c=(a.city||'').trim();
+      if(c){
+        totalWithCity++;
+        e.cities.set(c,(e.cities.get(c)||0)+1);
+      }
+    }
+  }
+  const states=[...sm.values()].sort((a,b)=>b.articles-a.articles);
+  return{states,totalWithState,totalWithCity};
 }
